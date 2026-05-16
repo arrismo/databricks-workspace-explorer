@@ -8,7 +8,7 @@ This repo now includes a VS Code extension to browse Databricks Workspace files 
 
 ## What it does
 
-Registers a read-only filesystem provider at:
+Registers a filesystem provider at:
 
 - `dbws:/`
 
@@ -50,6 +50,7 @@ In the Extension Development Host:
 
 ## Notes
 
-- Provider is currently read-only.
-- Notebooks are exported in `SOURCE` format when opened.
-- Regular files use `AUTO` export format.
+- Supports create/write/delete for workspace files and notebooks.
+- Notebook files are shown as `.ipynb` in Explorer and use JUPYTER import/export.
+- Script/text files use SOURCE import and AUTO export.
+- Directory rename is not supported yet.

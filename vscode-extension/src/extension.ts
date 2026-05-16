@@ -1,5 +1,13 @@
 import * as vscode from "vscode";
-import { decodeBase64Content, toDbPath, toFileType, type WorkspaceObjectType } from "./workspaceUtils";
+import {
+  decodeBase64Content,
+  displayNameForObject,
+  exportFormatForPath,
+  importFormatForPath,
+  toFileType,
+  toWorkspacePathFromUriPath,
+  type WorkspaceObjectType,
+} from "./workspaceUtils";
 
 type WorkspaceObject = {
   path: string;
@@ -14,6 +22,8 @@ type WorkspaceExportResponse = {
   content?: string;
 };
 
+type WorkspaceImportFormat = "SOURCE" | "JUPYTER";
+
 class DatabricksWorkspaceFS implements vscode.FileSystemProvider {
   private readonly emitter = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
   readonly onDidChangeFile = this.emitter.event;
@@ -23,7 +33,7 @@ class DatabricksWorkspaceFS implements vscode.FileSystemProvider {
   }
 
   async stat(uri: vscode.Uri): Promise<vscode.FileStat> {
-    const dbPath = toDbPath(uri.path);
+    const dbPath = toWorkspacePathFromUriPath(uri.path);
     if (dbPath === "/") {
       return { type: vscode.FileType.Directory, ctime: 0, mtime: 0, size: 0 };
     }
@@ -33,27 +43,27 @@ class DatabricksWorkspaceFS implements vscode.FileSystemProvider {
   }
 
   async readDirectory(uri: vscode.Uri): Promise<[string, vscode.FileType][]> {
-    const dbPath = toDbPath(uri.path);
+    const dbPath = toWorkspacePathFromUriPath(uri.path);
     const data = await this.api<{ objects?: WorkspaceObject[] }>(
       `/api/2.0/workspace/list?path=${encodeURIComponent(dbPath)}`
     );
     const objects = data.objects ?? [];
 
     return objects.map((o) => {
-      const name = o.path.split("/").filter(Boolean).pop() ?? o.path;
+      const name = displayNameForObject(o.path, o.object_type);
       return [name, this.toVsFileType(o.object_type)] as [string, vscode.FileType];
     });
   }
 
   async readFile(uri: vscode.Uri): Promise<Uint8Array> {
-    const dbPath = toDbPath(uri.path);
+    const dbPath = toWorkspacePathFromUriPath(uri.path);
     const status = await this.getStatus(dbPath);
 
     if (status.object_type === "DIRECTORY") {
       throw vscode.FileSystemError.FileIsADirectory(uri);
     }
 
-    const format = status.object_type === "NOTEBOOK" ? "SOURCE" : "AUTO";
+    const format = exportFormatForPath(uri.path, status.object_type);
     const exported = await this.api<WorkspaceExportResponse>(
       `/api/2.0/workspace/export?path=${encodeURIComponent(dbPath)}&format=${format}`
     );
@@ -61,20 +71,67 @@ class DatabricksWorkspaceFS implements vscode.FileSystemProvider {
     return decodeBase64Content(exported.content);
   }
 
-  createDirectory(): void {
-    throw vscode.FileSystemError.NoPermissions("Read-only provider");
+  async createDirectory(uri: vscode.Uri): Promise<void> {
+    const path = toWorkspacePathFromUriPath(uri.path);
+    await this.apiPost("/api/2.0/workspace/mkdirs", { path });
+    this.emitter.fire([{ type: vscode.FileChangeType.Created, uri }]);
   }
 
-  writeFile(): void {
-    throw vscode.FileSystemError.NoPermissions("Read-only provider");
+  async writeFile(
+    uri: vscode.Uri,
+    content: Uint8Array,
+    options: { create: boolean; overwrite: boolean }
+  ): Promise<void> {
+    const path = toWorkspacePathFromUriPath(uri.path);
+
+    if (!options.create && !(await this.exists(path))) {
+      throw vscode.FileSystemError.FileNotFound(uri);
+    }
+    if (!options.overwrite && (await this.exists(path))) {
+      throw vscode.FileSystemError.FileExists(uri);
+    }
+
+    const format = importFormatForPath(uri.path) as WorkspaceImportFormat;
+    await this.apiPost("/api/2.0/workspace/import", {
+      path,
+      format,
+      overwrite: true,
+      content: Buffer.from(content).toString("base64"),
+    });
+
+    this.emitter.fire([{ type: vscode.FileChangeType.Changed, uri }]);
   }
 
-  delete(): void {
-    throw vscode.FileSystemError.NoPermissions("Read-only provider");
+  async delete(uri: vscode.Uri, options: { recursive: boolean }): Promise<void> {
+    const path = toWorkspacePathFromUriPath(uri.path);
+    await this.apiPost("/api/2.0/workspace/delete", {
+      path,
+      recursive: options.recursive,
+    });
+    this.emitter.fire([{ type: vscode.FileChangeType.Deleted, uri }]);
   }
 
-  rename(): void {
-    throw vscode.FileSystemError.NoPermissions("Read-only provider");
+  async rename(oldUri: vscode.Uri, newUri: vscode.Uri, options: { overwrite: boolean }): Promise<void> {
+    const oldPath = toWorkspacePathFromUriPath(oldUri.path);
+    const newPath = toWorkspacePathFromUriPath(newUri.path);
+
+    const status = await this.getStatus(oldPath);
+    if (status.object_type === "DIRECTORY") {
+      throw vscode.FileSystemError.NoPermissions("Directory rename is not yet supported");
+    }
+
+    if (!options.overwrite && (await this.exists(newPath))) {
+      throw vscode.FileSystemError.FileExists(newUri);
+    }
+
+    const content = await this.readFile(oldUri);
+    await this.writeFile(newUri, content, { create: true, overwrite: true });
+    await this.apiPost("/api/2.0/workspace/delete", { path: oldPath, recursive: false });
+
+    this.emitter.fire([
+      { type: vscode.FileChangeType.Deleted, uri: oldUri },
+      { type: vscode.FileChangeType.Created, uri: newUri },
+    ]);
   }
 
   private toFileStat(o: WorkspaceObject): vscode.FileStat {
@@ -94,6 +151,15 @@ class DatabricksWorkspaceFS implements vscode.FileSystemProvider {
     return this.api<WorkspaceObject>(
       `/api/2.0/workspace/get-status?path=${encodeURIComponent(path)}`
     );
+  }
+
+  private async exists(path: string): Promise<boolean> {
+    try {
+      await this.getStatus(path);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private async api<T>(endpoint: string): Promise<T> {
@@ -120,6 +186,32 @@ class DatabricksWorkspaceFS implements vscode.FileSystemProvider {
 
     return (await res.json()) as T;
   }
+
+  private async apiPost(endpoint: string, body: unknown): Promise<void> {
+    const config = vscode.workspace.getConfiguration("databricksWorkspace");
+    const host = (config.get<string>("host") || process.env.DATABRICKS_HOST || "").replace(/\/$/, "");
+    const token = config.get<string>("token") || process.env.DATABRICKS_TOKEN || "";
+
+    if (!host || !token) {
+      throw vscode.FileSystemError.Unavailable(
+        "Set databricksWorkspace.host and databricksWorkspace.token (or DATABRICKS_HOST/DATABRICKS_TOKEN)."
+      );
+    }
+
+    const res = await fetch(`${host}${endpoint}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw vscode.FileSystemError.Unavailable(`Databricks API ${res.status}: ${text}`);
+    }
+  }
 }
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -127,7 +219,7 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.workspace.registerFileSystemProvider("dbws", provider, {
       isCaseSensitive: true,
-      isReadonly: true,
+      isReadonly: false,
     })
   );
 
