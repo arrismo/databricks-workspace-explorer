@@ -23,6 +23,10 @@ dist/
 .coverage
 htmlcov/
 
+# Node / VS Code extension
+vscode-extension/node_modules/
+vscode-extension/out/
+
 # IDE / OS
 .DS_Store
 .vscode/*.log

@@ -1,63 +1,52 @@
 # databricks-workspace-mcp
 
-A local MCP server in Python that connects to a Databricks workspace and exposes workspace file tools.
+This repo now includes a VS Code extension to browse Databricks Workspace files in the Explorer side panel.
 
-## Tools exposed
+## VS Code extension location
 
-- `list_files(path)` — list files/folders at a workspace path
-- `read_file(path)` — export and return file content (notebook/script)
-- `search_files(query, path)` — search by filename under a path
-- `get_file_info(path)` — return metadata (type, size, modified time)
+- `vscode-extension/`
 
-## Requirements
+## What it does
 
-- Python 3.10+
-- Databricks workspace URL + token
-- Environment variables:
-  - `DATABRICKS_HOST`
-  - `DATABRICKS_TOKEN`
+Registers a read-only filesystem provider at:
 
-## Setup
+- `dbws:/`
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install .
-```
+So you can open Databricks workspace paths directly in VS Code Explorer.
 
-Set auth env vars:
+## Required auth
+
+Set either extension settings or env vars:
+
+- `databricksWorkspace.host` or `DATABRICKS_HOST`
+- `databricksWorkspace.token` or `DATABRICKS_TOKEN`
+
+Example host:
 
 ```bash
-export DATABRICKS_HOST="https://<your-workspace-host>"
-export DATABRICKS_TOKEN="<your-personal-access-token>"
+export DATABRICKS_HOST="https://dbc-2e2849bb-fd64.cloud.databricks.com"
 ```
 
-Run the MCP server:
+## Run the extension locally
 
 ```bash
-databricks-workspace-mcp
+cd vscode-extension
+npm install
+npm run compile
 ```
 
-## MCP client config (Claude Code, Codex, Zed)
+Then press `F5` in VS Code (Extension Development Host).
 
-You can use one canonical server setup across MCP clients:
+## Open Databricks in Explorer
 
-```json
-{
-  "servers": {
-    "databricks-workspace": {
-      "command": "databricks-workspace-mcp",
-      "args": [],
-      "env": {
-        "DATABRICKS_HOST": "https://<your-workspace-host>",
-        "DATABRICKS_TOKEN": "<your-personal-access-token>"
-      }
-    }
-  }
-}
-```
+In the Extension Development Host:
 
-Use this same configuration in Claude Code, Codex, or Zed (only the config file location/format wrapper may differ by client).
+1. Command Palette → `Databricks: Open Workspace Explorer`
+2. VS Code opens `dbws:/` as a folder
+3. Browse files/folders in the Explorer panel
 
-For VS Code Claude Code, a ready-to-edit version is included at `.vscode/mcp.json`.
+## Notes
 
+- Provider is currently read-only.
+- Notebooks are exported in `SOURCE` format when opened.
+- Regular files use `AUTO` export format.

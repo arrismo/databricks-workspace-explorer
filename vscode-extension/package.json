@@ -1,0 +1,50 @@
+{
+  "name": "databricks-workspace-explorer",
+  "displayName": "Databricks Workspace Explorer",
+  "description": "Browse Databricks workspace files in VS Code Explorer",
+  "version": "0.0.1",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.88.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onFileSystem:dbws",
+    "onCommand:databricksWorkspace.openRoot"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "databricksWorkspace.openRoot",
+        "title": "Databricks: Open Workspace Explorer"
+      }
+    ],
+    "configuration": {
+      "title": "Databricks Workspace Explorer",
+      "properties": {
+        "databricksWorkspace.host": {
+          "type": "string",
+          "default": "",
+          "description": "Databricks workspace URL, e.g. https://dbc-xxxx.cloud.databricks.com"
+        },
+        "databricksWorkspace.token": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Databricks personal access token. You can also set `DATABRICKS_TOKEN` env var."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "@types/vscode": "^1.88.0",
+    "typescript": "^5.5.4"
+  }
+}
