@@ -10,7 +10,7 @@ export function toDbPath(path: string): string {
   return path.startsWith("/") ? path : `/${path}`;
 }
 
-export function toFileType(objectType: WorkspaceObjectType): NormalizedFileType {
+export function toFileType(objectType: string): NormalizedFileType {
   return objectType === "DIRECTORY" ? "directory" : "file";
 }
 

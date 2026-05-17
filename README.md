@@ -14,17 +14,30 @@ Registers a filesystem provider at:
 
 So you can open Databricks workspace paths directly in VS Code Explorer.
 
-## Required auth
+## Authentication
 
-Set either extension settings or env vars:
+This extension uses the [Databricks JS SDK](https://www.npmjs.com/package/@databricks/sdk-experimental) for authentication, which supports multiple methods:
 
-- `databricksWorkspace.host` or `DATABRICKS_HOST`
-- `databricksWorkspace.token` or `DATABRICKS_TOKEN`
+1. **Databricks CLI profile** (recommended) — set up once with `databricks configure`, then set the VS Code setting `databricksWorkspace.profile` (defaults to `DEFAULT`).
+2. **Environment variables** — `DATABRICKS_HOST` + `DATABRICKS_TOKEN`.
+3. **OAuth (databricks-cli)** — run `databricks auth login` first.
+4. **Azure CLI** — for Azure Databricks workspaces.
 
-Example host:
+No token is ever stored in VS Code settings. Credentials are managed by the standard `~/.databrickscfg` file or the Databricks CLI's OAuth token cache.
+
+### Quick start
 
 ```bash
-export DATABRICKS_HOST="https://<your-workspace>.cloud.databricks.com"
+# Install Databricks CLI and authenticate
+databricks auth login --host https://<your-workspace>.cloud.databricks.com
+```
+
+Then set the workspace host in VS Code settings (optional — the SDK reads it from your `.databrickscfg`):
+
+```json
+{
+  "databricksWorkspace.host": "https://<your-workspace>.cloud.databricks.com"
+}
 ```
 
 ## Run the extension locally

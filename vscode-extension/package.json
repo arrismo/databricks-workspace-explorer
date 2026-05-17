@@ -30,10 +30,15 @@
           "default": "",
           "description": "Databricks workspace URL, e.g. https://dbc-xxxx.cloud.databricks.com"
         },
-        "databricksWorkspace.token": {
+        "databricksWorkspace.profile": {
+          "type": "string",
+          "default": "DEFAULT",
+          "description": "Databricks config profile name from ~/.databrickscfg"
+        },
+        "databricksWorkspace.databricksCliPath": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Databricks personal access token. You can also set `DATABRICKS_TOKEN` env var."
+          "description": "Path to the Databricks CLI binary (optional)"
         }
       }
     }
@@ -41,12 +46,20 @@
   "scripts": {
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "test": "tsx --test test/workspaceUtils.test.ts"
+    "test": "tsx --test test/workspaceUtils.test.ts",
+    "test:fs": "tsx --tsconfig test/tsconfig.json --test test/DatabricksWorkspaceFS.test.ts",
+    "test:all": "npm test && npm run test:fs"
+  },
+  "dependencies": {
+    "@databricks/sdk-experimental": "^0.17.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",
     "@types/vscode": "^1.88.0",
     "tsx": "^4.19.2",
     "typescript": "^5.5.4"
+  },
+  "dependencies": {
+    "@databricks/sdk-experimental": "^0.14.2"
   }
 }
