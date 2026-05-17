@@ -57,6 +57,10 @@ export class DatabricksWorkspaceFS implements vscode.FileSystemProvider {
     return new vscode.Disposable(() => {});
   }
 
+  refresh(uri: vscode.Uri = vscode.Uri.parse("dbws:/")): void {
+    this.emitter.fire([{ type: vscode.FileChangeType.Changed, uri }]);
+  }
+
   async stat(uri: vscode.Uri): Promise<vscode.FileStat> {
     const dbPath = toWorkspacePathFromUriPath(uri.path);
     if (dbPath === "/") {

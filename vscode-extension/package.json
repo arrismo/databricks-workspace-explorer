@@ -12,7 +12,10 @@
   ],
   "activationEvents": [
     "onFileSystem:dbws",
-    "onCommand:databricksWorkspace.openRoot"
+    "onCommand:databricksWorkspace.openRoot",
+    "onCommand:databricksWorkspace.openPath",
+    "onCommand:databricksWorkspace.refresh",
+    "onCommand:databricksWorkspace.showAuthProfile"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -20,6 +23,18 @@
       {
         "command": "databricksWorkspace.openRoot",
         "title": "Databricks: Open Workspace Explorer"
+      },
+      {
+        "command": "databricksWorkspace.openPath",
+        "title": "Databricks: Open Workspace Path"
+      },
+      {
+        "command": "databricksWorkspace.refresh",
+        "title": "Databricks: Refresh Workspace"
+      },
+      {
+        "command": "databricksWorkspace.showAuthProfile",
+        "title": "Databricks: Show Active Auth/Profile"
       }
     ],
     "configuration": {
