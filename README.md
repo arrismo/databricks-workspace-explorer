@@ -2,10 +2,6 @@
 
 A VS Code extension that mounts your Databricks Workspace as `dbws:/` so you can browse and edit workspace files from the Explorer.
 
-## VS Code extension location
-
-- `vscode-extension/`
-
 ## What it does
 
 Registers a filesystem provider at:
@@ -18,7 +14,7 @@ So you can open Databricks workspace paths directly in VS Code Explorer.
 
 This extension uses the [Databricks JS SDK](https://www.npmjs.com/package/@databricks/sdk-experimental) for authentication, which supports multiple methods:
 
-1. **Databricks CLI profile** (recommended) — set up once with `databricks configure`, then set the VS Code setting `databricksWorkspace.profile` (defaults to `DEFAULT`).
+1. **Databricks CLI profile** (recommended) — set up once with `databricks configure`, then set the VS Code setting `databricksWorkspace.profile` (leave it empty to use the Databricks CLI default profile).
 2. **Environment variables** — `DATABRICKS_HOST` + `DATABRICKS_TOKEN`.
 3. **OAuth (databricks-cli)** — run `databricks auth login` first.
 4. **Azure CLI** — for Azure Databricks workspaces.
@@ -43,15 +39,12 @@ Then set the workspace host in VS Code settings (optional — the SDK reads it f
 ## Run the extension locally
 
 ```bash
-cd vscode-extension
 npm install
 npm run compile
-npm test
+npm run test:all
 ```
 
 Then press `F5` in VS Code (Extension Development Host).
-
-A debug config is included at `vscode-extension/.vscode/launch.json` (configuration name: `Run Extension`).
 
 ## Open Databricks in Explorer
 
